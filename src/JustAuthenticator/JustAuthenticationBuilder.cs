@@ -1,0 +1,115 @@
+﻿using JustAuthenticator.Abstractions;
+using JustAuthenticator.Token;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
+using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace JustAuthenticator
+{
+    public class JustAuthenticationBuilder
+    {
+        private readonly IServiceCollection _serviceCollection;
+
+        private SecurityKey key;
+
+        public string audience;
+
+        public string issuer;
+
+        private TimeSpan expiration = TimeSpan.FromHours(1);
+
+        private bool passwordProviderAdded = false;
+
+        private bool codeProviderAdded = false;
+
+
+        public JustAuthenticationBuilder(IServiceCollection serviceCollection)
+        {
+            this._serviceCollection = serviceCollection;
+        }
+
+        public JustAuthenticationBuilder UseKey(SecurityKey key)
+        {
+            this.key = key;
+            return this;
+        }
+
+        public JustAuthenticationBuilder UseSymmetricKey(byte[] key)
+        {
+            return UseKey(new SymmetricSecurityKey(key));
+        }
+
+        public JustAuthenticationBuilder UseSymmetricKey(string key)
+        {
+            return UseKey(new SymmetricSecurityKey(Encoding.ASCII.GetBytes(key)));
+        }
+
+        public JustAuthenticationBuilder SetAudience(string audience)
+        {
+            this.audience = audience;
+            return this;
+        }
+
+        public JustAuthenticationBuilder SetIssuer(string issuer)
+        {
+            this.issuer = issuer;
+            return this;
+        }
+
+        public JustAuthenticationBuilder SetExpiration(TimeSpan expiration)
+        {
+            this.expiration = expiration;
+            return this;
+        }
+
+        public JustAuthenticationBuilder AddPasswordProvider<T>() where T : class, IPasswordProvider
+        {
+            passwordProviderAdded = true;
+
+            this._serviceCollection
+                .AddSingleton<IPasswordProvider, T>();
+
+            return this;
+        }
+
+        public JustAuthenticationBuilder AddCodeProvider<T>() where T : class, ICodeProvider
+        {
+            codeProviderAdded = true;
+
+            this._serviceCollection
+                .AddSingleton<ICodeProvider, T>();
+
+            return this;
+        }
+
+        public JustAuthenticationBuilder UseHandler<T, TClient, TUser>() where T : class, IAuthenticatorService<TClient, TUser>
+        {
+            _serviceCollection
+                .AddScoped<IAuthenticatorService<TClient, TUser>, T>()
+                .AddScoped<ITokenEndpointService, TokenEndpointService<TClient, TUser>>();
+
+            return this;
+        }
+
+        public JustAuthenticationConfiguration Build()
+        {
+            if (!passwordProviderAdded)
+                _serviceCollection
+                    .AddSingleton<IPasswordProvider, DefaultPasswordProvider>();
+
+            if (!codeProviderAdded)
+                _serviceCollection
+                    .AddSingleton<ICodeProvider, DefaultCodeProvider>();
+
+            return new JustAuthenticationConfiguration()
+            {
+                key = key,
+                audience = audience,
+                issuer = issuer,
+                expiration = expiration
+            };
+        }
+    }
+}

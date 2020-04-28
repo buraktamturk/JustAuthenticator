@@ -1,0 +1,48 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29509.3
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{310A75B9-F3C3-400C-B1B2-45B1FECA7FC6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{B70C2FEB-465B-4831-AF55-F7A8E9B10B7D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JustAuthenticator", "src\JustAuthenticator\JustAuthenticator.csproj", "{88F01294-F07A-4026-BB5C-A55E245BDE3A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JustAuthenticator.SampleWeb", "samples\JustAuthenticator.SampleWeb\JustAuthenticator.SampleWeb.csproj", "{3568B48B-9E87-4685-AA88-A88D522C38D5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{37BDB7E7-7218-4FD6-860A-51D8EA0A082B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JustAuthenticator.Tests", "tests\JustAuthenticator.Tests\JustAuthenticator.Tests.csproj", "{D47F7913-86CF-48EF-B787-F115EECBBACF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{88F01294-F07A-4026-BB5C-A55E245BDE3A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{88F01294-F07A-4026-BB5C-A55E245BDE3A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{88F01294-F07A-4026-BB5C-A55E245BDE3A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{88F01294-F07A-4026-BB5C-A55E245BDE3A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3568B48B-9E87-4685-AA88-A88D522C38D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3568B48B-9E87-4685-AA88-A88D522C38D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3568B48B-9E87-4685-AA88-A88D522C38D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3568B48B-9E87-4685-AA88-A88D522C38D5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D47F7913-86CF-48EF-B787-F115EECBBACF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D47F7913-86CF-48EF-B787-F115EECBBACF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D47F7913-86CF-48EF-B787-F115EECBBACF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D47F7913-86CF-48EF-B787-F115EECBBACF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{88F01294-F07A-4026-BB5C-A55E245BDE3A} = {310A75B9-F3C3-400C-B1B2-45B1FECA7FC6}
+		{3568B48B-9E87-4685-AA88-A88D522C38D5} = {B70C2FEB-465B-4831-AF55-F7A8E9B10B7D}
+		{D47F7913-86CF-48EF-B787-F115EECBBACF} = {37BDB7E7-7218-4FD6-860A-51D8EA0A082B}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {AA30832A-77C4-4A7D-8270-3C3178DCE272}
+	EndGlobalSection
+EndGlobal
