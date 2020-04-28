@@ -26,7 +26,7 @@ namespace JustAuthenticator
                         "authorization_code" => await service.ByExchangeCode(client_id, client_secret, a.Request.Form["code"], a.Request.Form["redirect_uri"]),
                         "password" => await service.ByResourceOwnerCredientals(client_id, client_secret, a.Request.Form["username"], a.Request.Form["password"]),
                         "refresh_token" => await service.ByRefreshToken(client_id, client_secret, a.Request.Form["refresh_token"]),
-                        _ => throw new Exception("invalid_grant"),
+                        _ => throw new OAuth2Exception("unsupported_grant_type"),
                     };
 
                     if(tokenResponse == null)

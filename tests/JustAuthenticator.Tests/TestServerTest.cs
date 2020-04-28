@@ -213,6 +213,109 @@ namespace JustAuthenticator.Tests
             }
         }
 
+        [Fact]
+        public async Task TestNonExistentRefreshToken()
+        {
+            var token = this.testServer.Services.CreateScope().ServiceProvider
+                .GetRequiredService<ICodeProvider>()
+                .New();
+
+            using (var res = await this.testClient.PostAsync("/token", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { "client_id", "test" },
+                { "client_secret", "test" },
+                { "grant_type", "refresh_token" },
+                { "refresh_token", token.code }
+            })))
+            {
+                Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
+
+                var data = await Json<OAuth2ErrorResponse>(res);
+                Assert.Equal("invalid_grant", data.code);
+            }
+        }
+
+        [Fact]
+        public async Task TestNonExistentExchangeCode()
+        {
+            var token = this.testServer.Services.CreateScope().ServiceProvider
+                .GetRequiredService<ICodeProvider>()
+                .New("test");
+
+            using (var res = await this.testClient.PostAsync("/token", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { "client_id", "test" },
+                { "client_secret", "test" },
+                { "grant_type", "authorization_code" },
+                { "code", token.code },
+                { "redirect_uri", "test" }
+            })))
+            {
+                Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
+
+                var data = await Json<OAuth2ErrorResponse>(res);
+                Assert.Equal("invalid_grant", data.code);
+            }
+        }
+
+        [Fact]
+        public async Task TestExistingExchangeCode()
+        {
+            var token = this.testServer.Services.CreateScope().ServiceProvider
+                .GetRequiredService<ICodeProvider>()
+                .New("http://test");
+
+            await this.testServer.Services.CreateScope().ServiceProvider
+                .GetRequiredService<IAuthenticatorService<TestClient, TestUser>>()
+                .SaveToken(new TestClient { }, new TestUser { }, token, true);
+
+            using (var res = await this.testClient.PostAsync("/token", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { "client_id", "test" },
+                { "client_secret", "test" },
+                { "grant_type", "authorization_code" },
+                { "code", token.code },
+                { "redirect_uri", "http://test" }
+            })))
+            {
+                res.EnsureSuccessStatusCode();
+
+                var data = await Json<TokenResponse>(res);
+
+                Assert.NotNull(data.access_token);
+                Assert.NotNull(data.refresh_token);
+                Assert.Equal("Bearer", data.token_type);
+            }
+        }
+
+        [Fact]
+        public async Task TestExistingExchangeCodeAsRefreshToken()
+        {
+            var token = this.testServer.Services.CreateScope().ServiceProvider
+                .GetRequiredService<ICodeProvider>()
+                .New();
+
+            await this.testServer.Services.CreateScope().ServiceProvider
+                .GetRequiredService<IAuthenticatorService<TestClient, TestUser>>()
+                .SaveToken(new TestClient { }, new TestUser { }, token, true);
+
+            using (var res = await this.testClient.PostAsync("/token", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { "client_id", "test" },
+                { "client_secret", "test" },
+                { "grant_type", "refresh_token" },
+                { "refresh_token", token.code }
+            })))
+            {
+                Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
+            }
+        }
+
+        private object IAuthenticatorService<T1, T2>()
+        {
+            throw new NotImplementedException();
+        }
+
         private async Task<T> Json<T>(HttpResponseMessage msg)
         {
             return JsonConvert.DeserializeObject<T>(await msg.Content.ReadAsStringAsync());
@@ -307,7 +410,7 @@ namespace JustAuthenticator.Tests
 
             public async Task<TestUser> ValidateToken(TestClient client, ICode token, bool dispose)
             {
-                if(!authenticationData.tokens.TryGetValue(token.id, out var data) || data.disposable != dispose || !token.password.Compare(data.token))
+                if(!authenticationData.tokens.TryGetValue(token.id, out var data) || data.token == null || data.disposable != dispose || !token.password.Compare(data.token))
                 {
                     return null;
                 }
