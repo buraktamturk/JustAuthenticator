@@ -370,52 +370,53 @@ namespace JustAuthenticator.Tests
                 this.authenticationData = authenticationData;
             }
 
-            public async Task<TestClient> GetClient(string client_id, IPassword client_secret)
+            public Task<TestClient> GetClient(string client_id, IPassword client_secret)
             {
                 var client = authenticationData.clients.FirstOrDefault(a => a.id == client_id);
                 if (client == null)
-                    return null;
+                    return Task.FromResult<TestClient>(null);
 
                 if (!client_secret.Compare(passwordProvider.Generate(client.password).Hashed))
-                    return null;
+                    return Task.FromResult<TestClient>(null);
 
-                return client;
+                return Task.FromResult(client);
             }
 
-            public async Task<TestUser> GetUser(TestClient client, string username, IPassword password, bool trusted)
+            public Task<TestUser> GetUser(TestClient client, string username, IPassword password, bool trusted)
             {
                 var user = authenticationData.users.FirstOrDefault(a => a.email == username);
                 if (user == null)
-                    return null;
+                    return Task.FromResult<TestUser>(null);
 
                 if (!password.Compare(passwordProvider.Generate(user.password).Hashed))
-                    return null;
+                    return Task.FromResult<TestUser>(null);
 
-                return user;
+                return Task.FromResult(user);
             }
 
-            public async Task<ClaimsIdentity> MakeClaims(TestClient client, TestUser user)
+            public Task<ClaimsIdentity> MakeClaims(TestClient client, TestUser user)
             {
                 var claims = new ClaimsIdentity();
 
 
 
-                return claims;
+                return Task.FromResult(claims);
             }
 
-            public async Task SaveToken(TestClient client, TestUser user, ICode token, bool disposable)
+            public Task SaveToken(TestClient client, TestUser user, ICode token, bool disposable)
             {
                 authenticationData.tokens[token.id] = (user, token.password.Hashed, disposable);
+                return Task.CompletedTask;
             }
 
-            public async Task<TestUser> ValidateToken(TestClient client, ICode token, bool dispose)
+            public Task<TestUser> ValidateToken(TestClient client, ICode token, bool dispose)
             {
-                if(!authenticationData.tokens.TryGetValue(token.id, out var data) || data.token == null || data.disposable != dispose || !token.password.Compare(data.token))
+                if (!authenticationData.tokens.TryGetValue(token.id, out var data) || data.token == null || data.disposable != dispose || !token.password.Compare(data.token))
                 {
-                    return null;
+                    return Task.FromResult<TestUser>(null);
                 }
 
-                return data.user;
+                return Task.FromResult(data.user);
             }
         }
 

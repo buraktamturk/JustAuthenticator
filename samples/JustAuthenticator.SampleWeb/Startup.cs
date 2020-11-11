@@ -18,9 +18,10 @@ namespace JustAuthenticator.SampleWeb
         public void ConfigureServices(IServiceCollection services)
         {
             services
+                .AddAuthorization()
                 .AddJustAuthenticator(builder => builder
-                    .UseSymmetricKey("Test12341234")
-                    .UseHandler<UserAuthenticationService, Client, User>()
+                    .UseSymmetricKey("Test12341234jhkhkjhkjhkj")
+                    .UseHandler<UserAuthenticationService, TestClient, TestUser>()
                     .SetIssuer("Test")
                     .SetAudience("Test Users")
                     .SetExpiration(TimeSpan.FromHours(1))
@@ -36,6 +37,8 @@ namespace JustAuthenticator.SampleWeb
             }
 
             app.UseRouting();
+            app.UseAuthentication()
+                .UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
