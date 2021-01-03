@@ -76,7 +76,7 @@ namespace JustAuthenticator
             basicAuthenticationProviderAdded = true;
 
             this._serviceCollection
-                .AddSingleton<IBasicAuthenticationProvider, T>();
+                .AddScoped<IBasicAuthenticationProvider, T>();
 
             return this;
         }

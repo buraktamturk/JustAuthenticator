@@ -49,6 +49,9 @@ namespace JustAuthenticator
                 })
                 .AddAuthentication(options =>
                 {
+                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+
                     configuration.authenticationOptions?.Invoke(options);
                 })
                 .AddJwtBearer(x =>
