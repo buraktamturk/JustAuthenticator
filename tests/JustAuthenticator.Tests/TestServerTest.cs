@@ -1,5 +1,7 @@
-﻿using JustAuthenticator.Models;
+﻿using JustAuthenticator.Abstractions;
+using JustAuthenticator.Models;
 using JustAuthenticator.Token;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -15,6 +17,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
@@ -115,6 +118,40 @@ namespace JustAuthenticator.Tests
             using (var res = await this.testClient.GetAsync("/authorized"))
             {
                 Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
+            }
+        }
+
+
+        [Fact]
+        public async Task TestAuthorizedEndpointBasicAuth()
+        {
+            using (var res = await this.testClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, "/authorized")
+            {
+                Headers =
+                {
+                    Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes("test:test")))
+                }
+            }))
+            {
+                var data = await res.Content.ReadAsStringAsync();
+                res.EnsureSuccessStatusCode();
+
+                Assert.Equal("hello world 2", data);
+            }
+        }
+
+        [Fact]
+        public async Task TestAuthorizedEndpointBasicAuthInvalidCredientals()
+        {
+            using (var res = await this.testClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, "/authorized")
+            {
+                Headers =
+                {
+                    Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes("test2:test2")))
+                }
+            }))
+            {
+                Assert.Equal(401, (int)res.StatusCode);
             }
         }
 
@@ -432,13 +469,13 @@ namespace JustAuthenticator.Tests
                     .AddMvcCore();
 
                 services
-                    .AddAuthorization()
                     .AddJustAuthenticator(builder => builder
                         .UseSymmetricKey("Test12341234jhkhkjhkjhkj")
                         .UseHandler<MockAuthenticationService, TestClient, TestUser>()
                         .SetIssuer("Test")
                         .SetAudience("Test Users")
                         .SetExpiration(TimeSpan.FromHours(1))
+                        .AddBasicAuthentication<MockBasicAuthenticationProvider>()
                         .Build());
             }
 
@@ -446,7 +483,7 @@ namespace JustAuthenticator.Tests
             public void Configure(IApplicationBuilder app)
             {
                 app.UseRouting();
-
+                app.UseDeveloperExceptionPage();
                 app.UseAuthentication()
                     .UseAuthorization();
 
@@ -466,6 +503,28 @@ namespace JustAuthenticator.Tests
                     {
                         webBuilder.UseStartup<MockStartup>();
                     });
+        }
+
+        public class MockBasicAuthenticationProvider : IBasicAuthenticationProvider
+        {
+            private readonly IPasswordProvider passwordProvider;
+
+            public MockBasicAuthenticationProvider(IPasswordProvider passwordProvider)
+            {
+                this.passwordProvider = passwordProvider;
+            }
+
+            public Task<ClaimsIdentity> Authenticate(string username, IPassword password)
+            {
+                if (username != "test" || !password.Compare(passwordProvider.Generate("test").Hashed))
+                    return Task.FromResult<ClaimsIdentity>(null);
+
+                var claims = new[] {
+                    new Claim(ClaimTypes.Name, "test"),
+                };
+
+                return Task.FromResult(new ClaimsIdentity(claims));
+            }
         }
     }
 

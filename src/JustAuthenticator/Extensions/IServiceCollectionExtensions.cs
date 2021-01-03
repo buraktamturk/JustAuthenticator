@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using JustAuthenticator.Services;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System;
@@ -26,14 +29,27 @@ namespace JustAuthenticator
                 IssuerSigningKey = configuration.key
             };
 
-            that
+            var auth = that
                 .AddSingleton(configuration)
                 .AddSingleton(configuration.key)
                 .AddSingleton(new SigningCredentials(configuration.key, SecurityAlgorithms.HmacSha512))
-                .AddAuthentication(x =>
+                .AddAuthorization(options =>
                 {
-                    x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                    x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                    var defaultAuthorizationPolicyBuilder = configuration.basicAuthentication ? new AuthorizationPolicyBuilder(
+                        "Basic",
+                        JwtBearerDefaults.AuthenticationScheme
+                    ) : new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme);
+
+                    defaultAuthorizationPolicyBuilder =
+                        defaultAuthorizationPolicyBuilder.RequireAuthenticatedUser();
+
+                    options.DefaultPolicy = defaultAuthorizationPolicyBuilder.Build();
+
+                    configuration.authorizationOptions?.Invoke(options);
+                })
+                .AddAuthentication(options =>
+                {
+                    configuration.authenticationOptions?.Invoke(options);
                 })
                 .AddJwtBearer(x =>
                 {
@@ -41,6 +57,11 @@ namespace JustAuthenticator
                     x.SaveToken = true;
                     x.TokenValidationParameters = parameters;
                 });
+
+            if (configuration.basicAuthentication)
+            {
+                auth.AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("Basic", null);
+            }
              
             return that;
         } 

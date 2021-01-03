@@ -18,7 +18,6 @@ namespace JustAuthenticator.SampleWeb
         public void ConfigureServices(IServiceCollection services)
         {
             services
-                .AddAuthorization()
                 .AddJustAuthenticator(builder => builder
                     .UseSymmetricKey("Test12341234jhkhkjhkjhkj")
                     .UseHandler<UserAuthenticationService, TestClient, TestUser>()

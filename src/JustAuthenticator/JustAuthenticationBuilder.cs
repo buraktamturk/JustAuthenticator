@@ -1,5 +1,7 @@
 ﻿using JustAuthenticator.Abstractions;
 using JustAuthenticator.Token;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System;
@@ -24,6 +26,11 @@ namespace JustAuthenticator
 
         private bool codeProviderAdded = false;
 
+        private bool basicAuthenticationProviderAdded = false;
+
+        private Action<AuthorizationOptions> authorizationOptions;
+
+        private Action<AuthenticationOptions> authenticationOptions;
 
         public JustAuthenticationBuilder(IServiceCollection serviceCollection)
         {
@@ -64,6 +71,16 @@ namespace JustAuthenticator
             return this;
         }
 
+        public JustAuthenticationBuilder AddBasicAuthentication<T>() where T : class, IBasicAuthenticationProvider
+        {
+            basicAuthenticationProviderAdded = true;
+
+            this._serviceCollection
+                .AddSingleton<IBasicAuthenticationProvider, T>();
+
+            return this;
+        }
+
         public JustAuthenticationBuilder AddPasswordProvider<T>() where T : class, IPasswordProvider
         {
             passwordProviderAdded = true;
@@ -93,6 +110,18 @@ namespace JustAuthenticator
             return this;
         }
 
+        public JustAuthenticationBuilder UseAuthorizationOptions(Action<AuthorizationOptions> options)
+        {
+            this.authorizationOptions = options;
+            return this;
+        }
+
+        public JustAuthenticationBuilder UseAuthenticationOptions(Action<AuthenticationOptions> options)
+        {
+            this.authenticationOptions = options;
+            return this;
+        }
+
         public JustAuthenticationConfiguration Build()
         {
             if (!passwordProviderAdded)
@@ -108,7 +137,10 @@ namespace JustAuthenticator
                 key = key,
                 audience = audience,
                 issuer = issuer,
-                expiration = expiration
+                expiration = expiration,
+                basicAuthentication = basicAuthenticationProviderAdded,
+                authenticationOptions = authenticationOptions,
+                authorizationOptions = authorizationOptions
             };
         }
     }
