@@ -489,7 +489,7 @@ namespace JustAuthenticator.Tests
 
                 app.UseEndpoints(endpoints =>
                 {
-                    endpoints.MapJustAuthenticator("/oauth2/token");
+                    endpoints.MapJustAuthenticator("/token");
 
                     endpoints.MapControllers();
                 });
