@@ -113,7 +113,7 @@ namespace JustAuthenticator
         public JustAuthenticationBuilder UseProvider<T, TClient, TUser>() where T : class, IAuthenticatorServiceProvider<TClient, TUser>
         {
             _serviceCollection
-                .AddScoped<IAuthenticatorServiceProvider<TClient, TUser>, T>();
+                .AddScoped<T>();
 
             return this;
         }

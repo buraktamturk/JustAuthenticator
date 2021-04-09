@@ -52,18 +52,18 @@ namespace JustAuthenticator
             }
         }
 
-        public static void MapJustAuthenticator(this IEndpointRouteBuilder that, string path = "/token")
+        public static IEndpointConventionBuilder MapJustAuthenticator(this IEndpointRouteBuilder that, string path = "/token")
         {
-            that.MapPost(path, async ctx => {
+            return that.MapPost(path, async ctx => {
                 var service = ctx.RequestServices.GetRequiredService<ITokenEndpointService>();
                 await Process(ctx, service);
             });
         }
 
-        public static void MapJustAuthenticator<X, TClient, TUser>(this IEndpointRouteBuilder that, string path = "/token") where X : IAuthenticatorServiceProvider<TClient, TUser>
+        public static IEndpointConventionBuilder MapJustAuthenticator<X, TClient, TUser>(this IEndpointRouteBuilder that, string path = "/token") where X : IAuthenticatorServiceProvider<TClient, TUser>
         {
-            that.MapPost(path, async ctx => {
-                var service = ctx.RequestServices.GetRequiredService<IAuthenticatorServiceProvider<TClient, TUser>>();
+            return that.MapPost(path, async ctx => {
+                var service = ctx.RequestServices.GetRequiredService<X>();
                 var srv = await service.FromContext(ctx);
                 await Process(ctx, new TokenEndpointService<TClient, TUser>(
                     srv,
