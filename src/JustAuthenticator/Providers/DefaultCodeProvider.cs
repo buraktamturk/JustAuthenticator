@@ -17,10 +17,7 @@ namespace JustAuthenticator.Token
             var id = Guid.NewGuid();
             var password = new byte[16];
 
-            using(var rng = new RNGCryptoServiceProvider())
-            {
-                rng.GetBytes(password);
-            }
+            RandomNumberGenerator.Fill(password);
 
             var str = String.Concat(Array.ConvertAll(password, x => x.ToString("X2")));
 

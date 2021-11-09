@@ -1,12 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1;net5.0</TargetFrameworks>
-    <Version>0.4.3</Version>
+    <TargetFrameworks>netcoreapp3.1;net5.0;net6.0</TargetFrameworks>
+    <Version>0.4.4</Version>
     <Company>Duelsoft, Inc.</Company>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors />
     <PackageLicenseExpression></PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/buraktamturk/JustAuthenticator</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,6 +27,11 @@
   <ItemGroup Condition="'$(TargetFramework)' == 'net5.0'">
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.*" />
     <PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="5.0.*" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.*" />
+    <PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="6.0.*" />
   </ItemGroup>
 
 </Project>
