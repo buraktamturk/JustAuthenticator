@@ -3,7 +3,6 @@
   <PropertyGroup>
     <TargetFrameworks>netcoreapp3.1;net5.0;net6.0;net7.0</TargetFrameworks>
     <Company>Duelsoft, Inc.</Company>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors />
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/buraktamturk/JustAuthenticator</RepositoryUrl>
