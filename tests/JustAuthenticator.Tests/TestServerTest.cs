@@ -72,6 +72,33 @@ namespace JustAuthenticator.Tests
                 Assert.Equal("Bearer", data.token_type);
             }
         }
+        
+        [Fact]
+        public async Task TestUserNamePasswordLoginWithHeader()
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Post, "/token")
+            {
+                Headers =
+                {
+                    Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String("test:test"u8))
+                },
+                Content = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    { "grant_type", "password" },
+                    { "username", "test" },
+                    { "password", "test" }
+                })
+            };
+
+            using var res = await this.testClient.SendAsync(req);
+            res.EnsureSuccessStatusCode();
+
+            var data = await Json<TokenResponse>(res);
+
+            Assert.NotNull(data.access_token);
+            Assert.NotNull(data.refresh_token);
+            Assert.Equal("Bearer", data.token_type);
+        }
 
         [Fact]
         public async Task TestAuthorizedEndpointWithToken()

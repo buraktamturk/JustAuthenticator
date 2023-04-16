@@ -1,4 +1,7 @@
-﻿using JustAuthenticator.Abstractions;
+﻿using System;
+using System.Linq;
+using System.Text;
+using JustAuthenticator.Abstractions;
 using JustAuthenticator.Models;
 using JustAuthenticator.Token;
 using Microsoft.AspNetCore.Builder;
@@ -17,9 +20,24 @@ namespace JustAuthenticator
         {
             try
             {
-                string client_id = a.Request.Form["client_id"];
-                string client_secret = a.Request.Form["client_secret"];
+                string client_id,
+                    client_secret;
 
+                if (a.Request.Headers.TryGetValue("Authorization", out var strAuthorization)
+                    && strAuthorization.FirstOrDefault() is {} auth && auth.StartsWith("Basic "))
+                {
+                    var data = Encoding.UTF8.GetString(Convert.FromBase64String(auth["Basic ".Length..]))
+                        .Split(':');
+
+                    client_id = data[0];
+                    client_secret = data[1];
+                }
+                else
+                {
+                    client_id = a.Request.Form["client_id"];
+                    client_secret = a.Request.Form["client_secret"];
+                }
+                
                 string grant_type = a.Request.Form["grant_type"];
 
                 var tokenResponse = grant_type switch
