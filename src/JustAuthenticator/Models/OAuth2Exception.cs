@@ -16,9 +16,5 @@ namespace JustAuthenticator
         public OAuth2Exception(string message, Exception innerException) : base(message, innerException)
         {
         }
-
-        protected OAuth2Exception(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }

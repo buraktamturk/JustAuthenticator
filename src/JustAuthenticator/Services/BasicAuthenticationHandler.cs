@@ -19,6 +19,8 @@ namespace JustAuthenticator.Services
         private readonly IBasicAuthenticationProvider _userService;
         private readonly IPasswordProvider _passwordService;
 
+        
+#if !NET8_0_OR_GREATER
         public BasicAuthenticationHandler(
             IOptionsMonitor<AuthenticationSchemeOptions> options,
             ILoggerFactory logger,
@@ -31,7 +33,20 @@ namespace JustAuthenticator.Services
             _userService = userService;
             _passwordService = passwordService;
         }
-
+#else
+        public BasicAuthenticationHandler(
+            IOptionsMonitor<AuthenticationSchemeOptions> options,
+            ILoggerFactory logger,
+            UrlEncoder encoder,
+            IBasicAuthenticationProvider userService,
+            IPasswordProvider passwordService)
+            : base(options, logger, encoder)
+        {
+            _userService = userService;
+            _passwordService = passwordService;
+        }
+#endif
+        
         protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
         {
             var endpoint = Context.GetEndpoint();

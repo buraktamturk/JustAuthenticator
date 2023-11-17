@@ -44,12 +44,19 @@ namespace JustAuthenticator
 
         public JustAuthenticationBuilder UseSymmetricKey(byte[] key)
         {
+            if (key.Length < 64)
+            {
+                var _key = new byte[64];
+                key.CopyTo(_key.AsSpan());
+                return UseKey(new SymmetricSecurityKey(_key));
+            }
+            
             return UseKey(new SymmetricSecurityKey(key));
         }
 
         public JustAuthenticationBuilder UseSymmetricKey(string key)
         {
-            return UseKey(new SymmetricSecurityKey(Encoding.ASCII.GetBytes(key)));
+            return UseSymmetricKey(Encoding.ASCII.GetBytes(key));
         }
 
         public JustAuthenticationBuilder SetAudience(string audience)
