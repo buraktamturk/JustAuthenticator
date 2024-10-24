@@ -1,152 +1,103 @@
-﻿using JustAuthenticator.Abstractions;
+﻿using System.Security.Claims;
+using JustAuthenticator.Abstractions;
 using JustAuthenticator.Token;
-using Microsoft.IdentityModel.Tokens;
-using System;
-using System.IdentityModel.Tokens.Jwt;
 using System.Threading.Tasks;
+using JustAuthenticator.Logging;
 
 namespace JustAuthenticator
 {
-    public class TokenEndpointService<TClient, TUser> : ITokenEndpointService
+    internal sealed class TokenEndpointService<TClient, TUser> : ITokenEndpointService
     {
         private readonly IAuthenticatorService<TClient, TUser> service;
-        private readonly JustAuthenticationConfiguration configuration;
-        private readonly JwtSecurityTokenHandler jwtSecurityTokenHandler;
-        private readonly SigningCredentials sc;
-
         private readonly IPasswordProvider passwordProvider;
         private readonly ICodeProvider codeProvider;
+        private readonly IAccessTokenService accessTokenService;
+        private readonly JustAuthenticatorMetrics metrics;
 
         public TokenEndpointService(
             IAuthenticatorService<TClient, TUser> service,
-            JustAuthenticationConfiguration configuration,
-            SigningCredentials sc,
             IPasswordProvider passwordProvider,
-            ICodeProvider codeProvider)
+            ICodeProvider codeProvider,
+            IAccessTokenService accessTokenService,
+            JustAuthenticatorMetrics metrics)
         {
             this.service = service;
-            this.configuration = configuration;
-            this.sc = sc;
             this.passwordProvider = passwordProvider;
             this.codeProvider = codeProvider;
-
-            this.jwtSecurityTokenHandler = new JwtSecurityTokenHandler();
+            this.accessTokenService = accessTokenService;
+            this.metrics = metrics;
         }
 
-        public async Task<TokenResponse> ByExchangeCode(string client_id, string client_secret, string code, string redirect_uri)
+        public async Task<TokenResponse> ByExchangeCode(string client_id, string client_secret, string code, string? redirect_uri)
         {
-            var now = DateTime.UtcNow;
-
             var client = await service.GetClient(client_id, passwordProvider.Generate(client_secret));
             if(client == null)
-            {
-                throw new OAuth2Exception("invalid_client");
-            }
+                throw new InvalidClientException();
+            
+            var parsedCode = codeProvider.Parse(code, redirect_uri);
+            if (parsedCode == null)
+                throw new InvalidGrantException();
 
-            var user = await service.ValidateToken(client, codeProvider.Parse(code, redirect_uri), true);
+            var user = await service.ValidateToken(client, parsedCode, true);
             if (user == null)
-            {
-                throw new OAuth2Exception("invalid_grant");
-            }
-
+                throw new InvalidGrantException();
+            
             var claims = await service.MakeClaims(client, user);
-
-            var access_token = this.jwtSecurityTokenHandler.CreateEncodedJwt(
-                issuer: configuration.issuer,
-                audience: configuration.audience,
-                subject: claims,
-                issuedAt: now,
-                notBefore: now,
-                expires: now + configuration.expiration,
-                signingCredentials: sc
-            );
-
+            var token = accessTokenService.IssueToken(claims);
+            
             var refreshToken = codeProvider.New();
             await service.SaveToken(client, user, refreshToken, false);
-
-            return new TokenResponse
+            
+            metrics.RecordAuthenticationSuccess(claims.FindFirst(ClaimTypes.Role)?.Value);
+            
+            return token with
             {
-                access_token = access_token,
-                expires_in = 3599,
-                token_type = "Bearer",
                 refresh_token = refreshToken.code
             };
         }
 
         public async Task<TokenResponse> ByRefreshToken(string client_id, string client_secret, string refresh_token)
         {
-            var now = DateTime.UtcNow;
-
             var client = await service.GetClient(client_id, passwordProvider.Generate(client_secret));
             if (client == null)
-            {
-                throw new OAuth2Exception("invalid_client");
-            }
+                throw new InvalidClientException();
 
             var refreshToken = codeProvider.Parse(refresh_token);
+            if (refreshToken == null)
+                throw new InvalidGrantException();
+            
             var user = await service.ValidateToken(client, refreshToken, false);
             if (user == null)
-            {
-                throw new OAuth2Exception("invalid_grant");
-            }
+                throw new InvalidGrantException();
 
             var claims = await service.MakeClaims(client, user);
+            var token = accessTokenService.IssueToken(claims);
 
-            var access_token = this.jwtSecurityTokenHandler.CreateEncodedJwt(
-                issuer: configuration.issuer,
-                audience: configuration.audience,
-                subject: claims,
-                issuedAt: now,
-                notBefore: now,
-                expires: now + configuration.expiration,
-                signingCredentials: sc
-            );
-
-            return new TokenResponse
-            {
-                access_token = access_token,
-                expires_in = 3599,
-                token_type = "Bearer",
-                refresh_token = refreshToken.code
-            };
+            metrics.RecordAuthenticationSuccess(claims.FindFirst(ClaimTypes.Role)?.Value);
+            
+            return token; 
         }
 
         public async Task<TokenResponse> ByResourceOwnerCredientals(string client_id, string client_secret, string username, string password)
         {
-            var now = DateTime.UtcNow;
-
             var client = await service.GetClient(client_id, passwordProvider.Generate(client_secret));
             if(client == null)
-            {
-                throw new OAuth2Exception("invalid_client");
-            }
+                throw new InvalidClientException();
 
             var user = await service.GetUser(client, username, passwordProvider.Generate(password), true);
             if (user == null)
-            {
-                throw new OAuth2Exception("invalid_grant");
-            }
+                throw new InvalidGrantException();
 
             var claims = await service.MakeClaims(client, user);
-
-            var access_token = this.jwtSecurityTokenHandler.CreateEncodedJwt(
-                issuer: configuration.issuer,
-                audience: configuration.audience,
-                subject: claims,
-                issuedAt: now,
-                notBefore: now,
-                expires: now + configuration.expiration,
-                signingCredentials: sc
-            );
-
+            var token = accessTokenService.IssueToken(claims);
+            
             var refreshToken = codeProvider.New();
             await service.SaveToken(client, user, refreshToken, false);
-
-            return new TokenResponse
+            
+            metrics.RecordAuthenticationSuccess(claims.FindFirst(ClaimTypes.Role)?.Value);
+            
+            return token with
             {
-                access_token = access_token,
-                expires_in = 3599,
-                token_type = "Bearer",
                 refresh_token = refreshToken.code
             };
         }

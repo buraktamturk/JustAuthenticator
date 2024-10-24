@@ -1,13 +1,4 @@
 ﻿namespace JustAuthenticator
 {
-    public class TokenResponse
-    {
-        public string access_token { get; set; }
-
-        public string token_type { get; set; }
-
-        public int expires_in { get; set; }
-
-        public string refresh_token { get; set; }
-    }
+    public record TokenResponse(string access_token, string token_type, int expires_in, string? refresh_token = null);
 }

@@ -8,86 +8,99 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.IdentityModel.Tokens;
-using System.Text.Json;
 using System.Threading.Tasks;
+using JustAuthenticator.Logging;
+using JustAuthenticator.Services;
 
 namespace JustAuthenticator
 {
     public static class IEndpointRouteBuilderExtensions
     {
-        private static async Task Process(HttpContext a, ITokenEndpointService service)
+        private static async Task<IResult> Process(HttpRequest request, ITokenEndpointService service)
         {
+            var metrics = request.HttpContext.RequestServices.GetRequiredService<JustAuthenticatorMetrics>();
             try
             {
-                string client_id,
-                    client_secret;
+                string? clientId, clientSecret;
 
-                if (a.Request.Headers.TryGetValue("Authorization", out var strAuthorization)
-                    && strAuthorization.FirstOrDefault() is {} auth && auth.StartsWith("Basic "))
+                if (request.Headers.TryGetValue("Authorization", out var strAuthorization)
+                    && strAuthorization.FirstOrDefault(header => header?.StartsWith("Basic ") == true) is {} auth)
                 {
                     var data = Encoding.UTF8.GetString(Convert.FromBase64String(auth["Basic ".Length..]))
                         .Split(':');
 
-                    client_id = data[0];
-                    client_secret = data[1];
+                    clientId = data[0];
+                    clientSecret = data[1];
                 }
                 else
                 {
-                    client_id = a.Request.Form["client_id"];
-                    client_secret = a.Request.Form["client_secret"];
+                    clientId = request.Form["client_id"];
+                    clientSecret = request.Form["client_secret"];
                 }
-                
-                string grant_type = a.Request.Form["grant_type"];
 
-                var tokenResponse = grant_type switch
+                if (clientId is null || clientSecret is null)
+                    throw new InvalidClientException();
+                
+                string? grantType = request.Form["grant_type"];
+                var token = grantType switch
                 {
-                    "authorization_code" => await service.ByExchangeCode(client_id, client_secret, a.Request.Form["code"], a.Request.Form["redirect_uri"]),
-                    "password" => await service.ByResourceOwnerCredientals(client_id, client_secret, a.Request.Form["username"], a.Request.Form["password"]),
-                    "refresh_token" => await service.ByRefreshToken(client_id, client_secret, a.Request.Form["refresh_token"]),
-                    _ => throw new OAuth2Exception("unsupported_grant_type"),
+                    "authorization_code" => await service.ByExchangeCode(
+                        clientId,
+                        clientSecret,
+                        request.Form["code"].FirstOrDefault()
+                            ?? throw new OAuth2Exception("invalid_request", "Code is required"), 
+                        request.Form["redirect_uri"]
+                    ),
+                    "password" => await service.ByResourceOwnerCredientals(
+                        clientId,
+                        clientSecret, 
+                        request.Form["username"].FirstOrDefault()
+                                      ?? throw new OAuth2Exception("invalid_request", "Username is required"),
+                        request.Form["password"].FirstOrDefault()
+                            ?? throw new OAuth2Exception("invalid_request", "Password is required")
+                    ),
+                    "refresh_token" => await service.ByRefreshToken(
+                        clientId,
+                        clientSecret,
+                        request.Form["refresh_token"].FirstOrDefault()
+                            ?? throw new OAuth2Exception("invalid_request", "Refresh token is required")),
+                    _ => throw new UnsupportedGrantTypeException(),
                 };
 
-                if (tokenResponse == null)
-                {
-                    throw new OAuth2Exception("invalid_grant");
-                }
+                if (token == null)
+                    throw new InvalidGrantException();
 
-                a.Response.StatusCode = 200;
-                a.Response.ContentType = "application/json; charset=UTF-8";
-                await JsonSerializer.SerializeAsync(a.Response.Body, tokenResponse);
+                return Results.Json(token, SourceGenerationContext.Default.TokenResponse);
             }
             catch (OAuth2Exception e)
             {
-                a.Response.StatusCode = 401;
-                a.Response.ContentType = "application/json; charset=UTF-8";
-
-                await JsonSerializer.SerializeAsync(a.Response.Body, new OAuth2ErrorResponse
-                {
-                    code = e.Message
-                });
+                metrics.RecordAuthenticationError(e.Error);
+                return Results.Json(new OAuth2ErrorResponse(e.Error, e.ErrorDescription),
+                    SourceGenerationContext.Default.OAuth2ErrorResponse, statusCode: e is InvalidClientException or InvalidGrantException ? 401 : 400);
             }
         }
 
         public static IEndpointConventionBuilder MapJustAuthenticator(this IEndpointRouteBuilder that, string path = "/token")
         {
-            return that.MapPost(path, async ctx => {
-                var service = ctx.RequestServices.GetRequiredService<ITokenEndpointService>();
-                await Process(ctx, service);
+            return that.MapPost(path, async (HttpRequest request) => {
+                var service = request.HttpContext.RequestServices.GetRequiredService<ITokenEndpointService>();
+                return await Process(request, service);
             });
         }
 
-        public static IEndpointConventionBuilder MapJustAuthenticator<X, TClient, TUser>(this IEndpointRouteBuilder that, string path = "/token") where X : IAuthenticatorServiceProvider<TClient, TUser>
+        public static IEndpointConventionBuilder MapJustAuthenticator<TAuthenticatorServiceProvider, TClient, TUser>(this IEndpointRouteBuilder that, string path = "/token")
+            where TAuthenticatorServiceProvider : IAuthenticatorServiceProvider<TClient, TUser>
         {
-            return that.MapPost(path, async ctx => {
-                var service = ctx.RequestServices.GetRequiredService<X>();
-                var srv = await service.FromContext(ctx);
-                await Process(ctx, new TokenEndpointService<TClient, TUser>(
+            return that.MapPost(path, async (HttpRequest request) => {
+                var service = request.HttpContext.RequestServices.GetRequiredService<TAuthenticatorServiceProvider>();
+                var srv = await service.FromContext(request.HttpContext);
+                
+                return await Process(request, new TokenEndpointService<TClient, TUser>(
                     srv,
-                    ctx.RequestServices.GetRequiredService<JustAuthenticationConfiguration>(),
-                    ctx.RequestServices.GetRequiredService<SigningCredentials>(),
-                    ctx.RequestServices.GetRequiredService<IPasswordProvider>(),
-                    ctx.RequestServices.GetRequiredService<ICodeProvider>()
+                    request.HttpContext.RequestServices.GetRequiredService<IPasswordProvider>(),
+                    request.HttpContext.RequestServices.GetRequiredService<ICodeProvider>(),
+                    request.HttpContext.RequestServices.GetRequiredService<IAccessTokenService>(),
+                    request.HttpContext.RequestServices.GetRequiredService<JustAuthenticatorMetrics>()
                 ));
             });
         }

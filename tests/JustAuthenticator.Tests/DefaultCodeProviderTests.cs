@@ -58,6 +58,7 @@ namespace JustAuthenticator.Tests
             var hash = code.password.Hashed;
 
             var code2 = provider.Parse(code.code);
+            Assert.NotNull(code2);
 
             Assert.Equal(code.id, code2.id);
             Assert.Equal(code.code, code2.code);
@@ -90,6 +91,7 @@ namespace JustAuthenticator.Tests
             var hash = code.password.Hashed;
 
             var code2 = provider.Parse(code.code, "hidden");
+            Assert.NotNull(code2);
 
             Assert.Equal(code.id, code2.id);
             Assert.Equal(code.code, code2.code);
@@ -106,6 +108,7 @@ namespace JustAuthenticator.Tests
             var hash = code.password.Hashed;
 
             var code2 = provider.Parse(code.code, "hidden2");
+            Assert.NotNull(code2);
 
             Assert.Equal(code.id, code2.id);
             Assert.Equal(code.code, code2.code);

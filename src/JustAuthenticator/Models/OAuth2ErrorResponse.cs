@@ -1,8 +1,10 @@
 ﻿
+using Microsoft.AspNetCore.Http;
+
 namespace JustAuthenticator.Models
 {
-    public class OAuth2ErrorResponse
+    public record OAuth2ErrorResponse(string error, string? error_description)
     {
-        public string code { get; set; }
+        public string code => error;
     }
 }

@@ -6,6 +6,6 @@ namespace JustAuthenticator.Abstractions
 {
     public interface IBasicAuthenticationProvider
     {
-        Task<ClaimsIdentity> Authenticate(string username, IPassword password);
+        Task<ClaimsIdentity?> Authenticate(string username, IPassword password);
     }
 }

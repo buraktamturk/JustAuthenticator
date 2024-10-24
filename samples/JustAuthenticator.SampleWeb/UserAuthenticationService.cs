@@ -7,38 +7,20 @@ using System.Threading.Tasks;
 
 namespace JustAuthenticator.SampleWeb
 {
-    public class TestClient
-    {
-        public string id { get; set; }
+    public record TestClient(string id, string password);
 
-        public string password { get; set; }
-    }
-
-    public class TestUser
-    {
-        public string email { get; set; }
-
-        public string password { get; set; }
-    }
+    public record TestUser(string email, string password);
 
     public class MockAuthenticationData
     {
         public List<TestClient> clients = new List<TestClient>()
             {
-                new TestClient()
-                {
-                    id = "test",
-                    password = "test"
-                }
+                new TestClient("test", "test")
             };
 
         public List<TestUser> users = new List<TestUser>()
             {
-                new TestUser()
-                {
-                    email = "test",
-                    password = "test"
-                }
+                new TestUser("test", "test")
             };
 
         public Dictionary<Guid, (TestUser user, string token, bool disposable)> tokens
@@ -56,28 +38,28 @@ namespace JustAuthenticator.SampleWeb
             this.authenticationData = authenticationData;
         }
 
-        public Task<TestClient> GetClient(string client_id, IPassword client_secret)
+        public Task<TestClient?> GetClient(string client_id, IPassword client_secret)
         {
             var client = authenticationData.clients.FirstOrDefault(a => a.id == client_id);
             if (client == null)
-                return null;
+                return Task.FromResult(default(TestClient?));
 
             if (!client_secret.Compare(passwordProvider.Generate(client.password).Hashed))
-                return null;
+                return Task.FromResult(default(TestClient?));
 
-            return Task.FromResult(client);
+            return Task.FromResult<TestClient?>(client);
         }
 
-        public Task<TestUser> GetUser(TestClient client, string username, IPassword password, bool trusted)
+        public Task<TestUser?> GetUser(TestClient client, string username, IPassword password, bool trusted)
         {
             var user = authenticationData.users.FirstOrDefault(a => a.email == username);
             if (user == null)
-                return null;
+                return Task.FromResult(default(TestUser?));
 
             if (!password.Compare(passwordProvider.Generate(user.password).Hashed))
-                return null;
+                return Task.FromResult(default(TestUser?));
 
-            return Task.FromResult(user);
+            return Task.FromResult<TestUser?>(user);
         }
 
         public Task<ClaimsIdentity> MakeClaims(TestClient client, TestUser user)
@@ -95,14 +77,14 @@ namespace JustAuthenticator.SampleWeb
             return Task.CompletedTask;
         }
 
-        public Task<TestUser> ValidateToken(TestClient client, ICode token, bool dispose)
+        public Task<TestUser?> ValidateToken(TestClient client, ICode token, bool dispose)
         {
-            if (!authenticationData.tokens.TryGetValue(token.id, out var data) || data.token == null || data.disposable != dispose || !token.password.Compare(data.token))
+            if (!authenticationData.tokens.TryGetValue(token.id, out var data) || data.disposable != dispose || !token.password.Compare(data.token))
             {
-                return null;
+                return Task.FromResult(default(TestUser?));
             }
 
-            return Task.FromResult(data.user);
+            return Task.FromResult<TestUser?>(data.user);
         }
     }
 }

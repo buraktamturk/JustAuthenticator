@@ -12,7 +12,7 @@ namespace JustAuthenticator.Token
             this.passwordProvider = passwordProvider;
         }
 
-        public ICode New(string hidden = null)
+        public ICode New(string? hidden = null)
         {
             var id = Guid.NewGuid();
             var password = new byte[16];
@@ -20,37 +20,30 @@ namespace JustAuthenticator.Token
             RandomNumberGenerator.Fill(password);
 
             var str = String.Concat(Array.ConvertAll(password, x => x.ToString("X2")));
+            var _password = passwordProvider.Generate(str + (hidden ?? ""));
 
-            return new Code
-            {
-                id = id,
-                password = passwordProvider.Generate(str + (hidden ?? "")),
-                code = id.ToString("N") + str
-            };
+            return new Code(id, _password, id.ToString("N") + str);
         }
 
-        public ICode Parse(string token, string hidden = null)
+        public ICode? Parse(string token, string? hidden = null)
         {
             if(token.Length != 64 || !Guid.TryParseExact(token.Substring(0, 32), "N", out var id))
             {
                 return null;
             }
 
-            return new Code
-            {
-                id = id,
-                password = passwordProvider.Generate(token.Substring(32) + (hidden ?? "")),
-                code = token
-            };
+            var password = passwordProvider.Generate(token.Substring(32) + (hidden ?? ""));
+
+            return new Code(id, password, token);
         }
 
-        private class Code : ICode
+        private class Code(Guid id, IPassword password, string code) : ICode
         {
-            public Guid id { get; set; }
+            public Guid id { get; } = id;
 
-            public IPassword password { get; set; }
+            public IPassword password { get; } = password;
 
-            public string code { get; set; }
+            public string code { get; } = code;
         }
     }
 }

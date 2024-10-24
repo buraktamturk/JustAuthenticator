@@ -6,6 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Text;
+using JustAuthenticator.Logging;
+using JustAuthenticator.Services;
 
 namespace JustAuthenticator
 {
@@ -13,11 +15,11 @@ namespace JustAuthenticator
     {
         private readonly IServiceCollection _serviceCollection;
 
-        private SecurityKey key;
+        private SecurityKey? key;
 
-        public string audience;
+        private string? audience;
 
-        public string issuer;
+        private string? issuer;
 
         private TimeSpan expiration = TimeSpan.FromHours(1);
 
@@ -27,9 +29,9 @@ namespace JustAuthenticator
 
         private bool basicAuthenticationProviderAdded = false;
 
-        private Action<AuthorizationOptions> authorizationOptions;
+        private Action<AuthorizationOptions>? authorizationOptions;
 
-        private Action<AuthenticationOptions> authenticationOptions;
+        private Action<AuthenticationOptions>? authenticationOptions;
 
         public JustAuthenticationBuilder(IServiceCollection serviceCollection)
         {
@@ -146,16 +148,15 @@ namespace JustAuthenticator
                 _serviceCollection
                     .AddSingleton<ICodeProvider, DefaultCodeProvider>();
 
-            return new JustAuthenticationConfiguration()
-            {
-                key = key,
-                audience = audience,
-                issuer = issuer,
-                expiration = expiration,
-                basicAuthentication = basicAuthenticationProviderAdded,
-                authenticationOptions = authenticationOptions,
-                authorizationOptions = authorizationOptions
-            };
+            _serviceCollection.AddScoped<IAccessTokenService, AccessTokenService>();
+            _serviceCollection.AddSingleton<JustAuthenticatorMetrics>();
+
+            return new JustAuthenticationConfiguration(
+                key: key ?? throw new InvalidOperationException("Key not set"),
+                audience: audience,
+                issuer: issuer,
+                expiration: expiration, basicAuthentication: basicAuthenticationProviderAdded,
+                authenticationOptions: authenticationOptions, authorizationOptions: authorizationOptions);
         }
     }
 }
