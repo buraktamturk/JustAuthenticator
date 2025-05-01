@@ -22,9 +22,14 @@ namespace JustAuthenticator
             try
             {
                 string? clientId, clientSecret;
-
-                if (request.Headers.TryGetValue("Authorization", out var strAuthorization)
-                    && strAuthorization.FirstOrDefault(header => header?.StartsWith("Basic ") == true) is {} auth)
+                
+                if (request.Form.ContainsKey("client_id") && request.Form.ContainsKey("client_secret"))
+                {
+                    clientId = request.Form["client_id"];
+                    clientSecret = request.Form["client_secret"];
+                }
+                else if (request.Headers.TryGetValue("Authorization", out var strAuthorization)
+                         && strAuthorization.FirstOrDefault(header => header?.StartsWith("Basic ") == true) is {} auth)
                 {
                     var data = Encoding.UTF8.GetString(Convert.FromBase64String(auth["Basic ".Length..]))
                         .Split(':');
@@ -34,8 +39,7 @@ namespace JustAuthenticator
                 }
                 else
                 {
-                    clientId = request.Form["client_id"];
-                    clientSecret = request.Form["client_secret"];
+                    throw new InvalidClientException();
                 }
 
                 if (clientId is null || clientSecret is null)
